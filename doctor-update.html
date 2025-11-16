@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Doctor Consultation – MediTech</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+body { font-family: 'Inter', sans-serif; background:#f4f8ff; margin:0; padding:20px; }
+.container {
+    max-width:850px; margin:auto; background:#fff; padding:25px;
+    border-radius:14px; border-top:6px solid #007bff;
+    box-shadow:0 8px 30px rgba(0,0,0,0.12);
+}
+h2 { text-align:center; color:#007bff; }
+.section-title { margin-top:25px; font-weight:700; color:#007bff; font-size:18px; }
+label { font-weight:600; margin-top:15px; display:block; }
+input, textarea {
+    width:100%; padding:12px; border-radius:10px; border:1.6px solid #cbd6e2;
+    background:#f8fbff; margin-top:5px;
+}
+textarea { resize:vertical; }
+.btn {
+    width:100%; padding:14px; margin-top:20px; background:#007bff;
+    color:white; border-radius:10px; font-weight:700; cursor:pointer;
+}
+.btn:hover { background:#005fcc; }
+
+.download-btn { background:#1abc9c; }
+.download-btn:hover { background:#129477; }
+
+.back-btn {
+    display:block; text-align:center; padding:12px; background:#e9ecef;
+    border-radius:10px; margin-top:10px; font-weight:600; color:#333;
+}
+
+.report-preview img {
+    width:120px; height:120px; object-fit:cover;
+    margin:8px; border-radius:10px; border:1px solid #ccc;
+}
+
+.report-preview .pdf-item {
+    display:flex; gap:10px; align-items:center;
+    background:#f1f1f1; padding:10px; border-radius:8px;
+    margin:8px 0; border:1px solid #ccc;
+    width:280px;
+}
+
+.timeline {
+    margin-top:20px; padding:15px; background:#eef4ff; border-radius:10px;
+    border-left:5px solid #007bff;
+}
+.timeline-item { margin-bottom:10px; }
+</style>
+
+</head>
+<body>
+
+<div class="container">
+    <h2>Doctor Consultation Panel</h2>
+
+    <!-- PATIENT SUMMARY -->
+    <div class="section-title">Patient Details</div>
+    <p><b>Name:</b> <span id="pName"></span></p>
+    <p><b>Age:</b> <span id="pAge"></span></p>
+    <p><b>Symptoms:</b> <span id="pSymptoms"></span></p>
+    <p><b>Department:</b> <span id="pDept"></span></p>
+
+    <!-- VITALS -->
+    <div class="section-title">Vitals</div>
+    <label>Blood Pressure</label><input type="text" id="bp">
+    <label>Pulse (bpm)</label><input type="number" id="pulse">
+    <label>Temperature (°F)</label><input type="number" id="temp">
+    <label>Weight (kg)</label><input type="number" id="weight">
+    <label>Oxygen Level (%)</label><input type="number" id="oxygen">
+
+    <!-- CONSULTATION -->
+    <div class="section-title">Diagnosis</div>
+    <textarea id="diagnosis" rows="3"></textarea>
+
+    <div class="section-title">Prescriptions (Medicines & Dosage)</div>
+    <textarea id="prescription" rows="3"></textarea>
+
+    <div class="section-title">Doctor Notes</div>
+    <textarea id="notes" rows="3"></textarea>
+
+    <!-- NEXT APPOINTMENT -->
+    <div class="section-title">Next Appointment Date</div>
+    <input type="date" id="nextDate">
+
+    <!-- UPLOAD LAB REPORTS -->
+    <div class="section-title">Upload Lab Reports (Images or PDF)</div>
+    <input type="file" id="reports" multiple accept="image/*,application/pdf">
+    <div id="reportPreview" class="report-preview"></div>
+
+    <!-- QR CODE -->
+    <button class="btn" onclick="generateQR()">Generate QR Code</button>
+    <div id="qrBox" style="margin-top:10px;"></div>
+
+    <!-- TIMELINE -->
+    <div class="section-title">Consultation Timeline</div>
+    <div id="timelineBox" class="timeline"></div>
+
+    <button class="btn" onclick="saveConsultation()">Save Consultation</button>
+
+    <button class="btn download-btn" onclick="downloadPDF()">📄 Download Report</button>
+
+    <a id="backLink" class="back-btn">Back</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAouRcoDjAVMNZmUkePlzNxUHD6DXxbxco",
+  authDomain: "meditech-83cbc.firebaseapp.com",
+  projectId: "meditech-83cbc"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+
+// SELECTED PATIENT
+let selected = JSON.parse(localStorage.getItem("selectedPatient"));
+if (!selected) { alert("No patient selected!"); window.location.href = "login.html"; }
+
+// Add missing timestamp if not present
+if (!selected.timestamp) {
+    selected.timestamp = Date.now();
+}
+
+// Set UI
+pName.textContent = selected.name;
+pAge.textContent = selected.age;
+pSymptoms.textContent = selected.symptoms;
+pDept.textContent = selected.department;
+
+if (selected.department === "Cardiology") backLink.href = "cardiology-doctor.html";
+if (selected.department === "Dermatology") backLink.href = "dermatology-doctor.html";
+if (selected.department === "General") backLink.href = "general-doctor.html";
+
+let reportsBase64 = [];
+
+
+reports.addEventListener("change", function() {
+    reportPreview.innerHTML = "";
+    reportsBase64 = [];
+
+    [...this.files].forEach(file => {
+        let reader = new FileReader();
+        reader.onload = () => {
+            if (file.type === "application/pdf") {
+                reportsBase64.push(reader.result);
+                reportPreview.innerHTML += `
+                    <div class="pdf-item">
+                        <span>📄</span>
+                        <div>${file.name}</div>
+                    </div>
+                `;
+            } else {
+                reportsBase64.push(reader.result);
+                reportPreview.innerHTML += `<img src="${reader.result}">`;
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+});
+
+
+/* ---------------- TIMELINE ---------------- */
+function loadTimeline() {
+    if (!selected.timeline) selected.timeline = [];
+    timelineBox.innerHTML = selected.timeline
+        .map(t => `<div class="timeline-item">• ${t}</div>`)
+        .join("");
+}
+loadTimeline();
+
+
+/* ---------------- QR CODE ---------------- */
+window.generateQR = async function () {
+    const qrData = JSON.stringify({
+        prescription: prescription.value,
+        patient_id: selected.patient_id,
+        patient_name: selected.name
+    });
+
+    QRCode.toDataURL(qrData, function(err, url) {
+        qrBox.innerHTML = `<img src="${url}" width="160">`;
+        selected.qr = url;
+
+        setDoc(doc(db, "qr_codes", selected.patient_id), {
+            qr: url,
+            payload: qrData,
+            createdAt: new Date()
+        });
+    });
+};
+
+
+/* ---------------- SAVE CONSULTATION (FIXED VERSION) ---------------- */
+window.saveConsultation = async function () {
+
+    selected.timeline.push("Consulted on: " + new Date().toLocaleString());
+
+    selected.bp = bp.value;
+    selected.pulse = pulse.value;
+    selected.temp = temp.value;
+    selected.weight = weight.value;
+    selected.oxygen = oxygen.value;
+
+    selected.diagnosis = diagnosis.value;
+    selected.prescription = prescription.value;
+    selected.notes = notes.value;
+    selected.nextDate = nextDate.value;
+    selected.reports = reportsBase64;
+    selected.status = "Consulted";
+
+    // -------- SAVE TO patient_consultations --------
+    await addDoc(collection(db, "patient_consultations", selected.patient_id, "records"), {
+        patient_id: selected.patient_id,
+        patient_name: selected.name,
+        age: selected.age,
+        department: selected.department,
+        diagnosis: selected.diagnosis,
+        prescription: selected.prescription,
+        notes: selected.notes,
+        vitals: {
+            bp: selected.bp,
+            pulse: selected.pulse,
+            temp: selected.temp,
+            weight: selected.weight,
+            oxygen: selected.oxygen
+        },
+        nextDate: selected.nextDate,
+        reports: reportsBase64,
+        qr: selected.qr || "",
+        timestamp: new Date()
+    });
+
+
+    // -------- SEND TO PHARMACY --------
+    await addDoc(collection(db, "pharmacy_prescriptions"), {
+        patient_id: selected.patient_id,
+        patient_name: selected.name,
+        age: selected.age,
+        department: selected.department,
+        diagnosis: selected.diagnosis,
+        prescription: selected.prescription,
+        next_appointment: selected.nextDate,
+        qr_data: JSON.stringify({
+            patient_id: selected.patient_id,
+            prescription: selected.prescription
+        }),
+        status: "Pending",
+        timestamp: new Date()
+    });
+
+    
+    /* -------- FIXED LOCAL STORAGE UPDATE -------- */
+    let storageKey =
+        selected.department === "Cardiology"
+        ? "cardiologyPatients"
+        : selected.department === "Dermatology"
+        ? "dermatologyPatients"
+        : "generalPatients";
+
+    let list = JSON.parse(localStorage.getItem(storageKey) || "[]");
+
+    // Remove old record
+    list = list.filter(x => x.patient_id !== selected.patient_id);
+
+    // Push updated patient data
+    list.push(selected);
+
+    // Save back
+    localStorage.setItem(storageKey, JSON.stringify(list));
+
+    alert("Consultation saved successfully!");
+
+    // Update selectedPatient in storage
+    localStorage.setItem("selectedPatient", JSON.stringify(selected));
+
+    window.location.href = backLink.href;
+};
+
+
+/* ---------------- PDF DOWNLOAD ---------------- */
+window.downloadPDF = function () {
+    const { jsPDF } = window.jspdf;
+    const docPDF = new jsPDF();
+
+    docPDF.setFontSize(18);
+    docPDF.text("Medical Consultation Report", 20, 20);
+
+    docPDF.setFontSize(12);
+    let y = 40;
+
+    docPDF.text(`Patient Name: ${selected.name}`, 20, y += 10);
+    docPDF.text(`Age: ${selected.age}`, 20, y += 10);
+    docPDF.text(`Symptoms: ${selected.symptoms}`, 20, y += 10);
+    docPDF.text(`Department: ${selected.department}`, 20, y += 10);
+    docPDF.text(`Next Appointment: ${selected.nextDate || "Not set"}`, 20, y += 10);
+
+    docPDF.text("Diagnosis:", 20, y += 20);
+    docPDF.text(docPDF.splitTextToSize(selected.diagnosis, 170), 20, y + 10);
+
+    docPDF.text("Prescription:", 20, y += 35);
+    docPDF.text(docPDF.splitTextToSize(selected.prescription, 170), 20, y + 10);
+
+    docPDF.save(`report_${selected.patient_id}.pdf`);
+};
+
+</script>
+
+</body>
+</html>

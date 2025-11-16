@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Pharmacy Dashboard - MediTech</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; margin:0; background:#f3f6f8; color:#111; }
+    header { background:#fff; padding:18px 22px; box-shadow:0 4px 18px rgba(0,0,0,0.06); display:flex; align-items:center; justify-content:space-between; }
+    .brand { display:flex; gap:12px; align-items:center; }
+    .brand img{height:44px}
+    .container { width:95%; max-width:1200px; margin:20px auto; display:grid; grid-template-columns: 380px 1fr; gap:18px; }
+    .card { background:#fff; border-radius:12px; padding:16px; box-shadow:0 8px 30px rgba(0,0,0,0.06); }
+    h2 { margin:0; color:#0b6ef6; font-weight:700; }
+    .muted { color:#666; }
+    .prescription-list { max-height:72vh; overflow:auto; margin-top:12px; }
+    .pres-card { padding:12px; border-radius:10px; background:#f8fbff; margin-bottom:10px; cursor:pointer; border:1px solid #e3f0ff; }
+    .pres-card .top { display:flex; justify-content:space-between; gap:10px; }
+    .tabs { display:flex; gap:8px; margin-bottom:12px; }
+    .tab { padding:8px 12px; background:#eef6ff; border-radius:8px; cursor:pointer; color:#0b6ef6; font-weight:600; }
+    .tab.active { background:#0b6ef6; color:#fff; }
+    .section { margin-top:12px; }
+    label { display:block; margin-top:10px; font-weight:600; color:#333; }
+    input[type="text"], input[type="number"], textarea, select { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d1dbe8; background:#fbfdff; }
+    textarea { min-height:80px; resize:vertical; }
+    .btn { display:inline-block; padding:10px 14px; border-radius:8px; background:#0b6ef6; color:#fff; border:none; cursor:pointer; font-weight:700; }
+    .btn.secondary { background:#1abc9c; }
+    .small { font-size:13px; color:#666; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    table { width:100%; border-collapse:collapse; margin-top:8px; }
+    th,td { padding:8px; border-bottom:1px solid #eee; text-align:left; font-size:14px; }
+    .right { text-align:right; }
+    .invoice { max-width:760px; margin:0 auto; padding:16px; }
+    .scanner { text-align:center; }
+    video { width:100%; max-height:360px; border-radius:10px; background:#000; }
+    .controls { display:flex; gap:8px; margin-top:8px; align-items:center; }
+    .tag { background:#eef6ff; padding:6px 8px; border-radius:6px; color:#0b6ef6; font-weight:700; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <img src="logo.webp" alt="logo" onerror="this.style.display='none'">
+    <div>
+      <div style="font-weight:700; color:#0b6ef6;">MediTech Pharmacy</div>
+      <div class="small muted">Real-time prescriptions & billing</div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:10px; align-items:center;">
+    <div class="small muted">Logged in as <strong>Pharmacist</strong></div>
+    <button class="btn" onclick="location.href='index.html'">Home</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- LEFT: prescriptions list + scanner -->
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0">Incoming Prescriptions</h3>
+      <div class="tag" id="pendingCount">0</div>
+    </div>
+
+    <div class="tabs" style="margin-top:12px;">
+      <div class="tab active" id="tabList" onclick="showTab('list')">List</div>
+      <div class="tab" id="tabScanner" onclick="showTab('scanner')">QR Scanner</div>
+    </div>
+
+    <!-- LIST TAB -->
+    <div id="tabContent-list">
+      <div class="prescription-list" id="presList"></div>
+    </div>
+
+    <!-- SCANNER TAB -->
+    <div id="tabContent-scanner" style="display:none;">
+      <div class="scanner">
+        <video id="video" muted playsinline></video>
+        <div class="controls">
+          <button class="btn" id="startScanBtn">Start Camera</button>
+          <button class="btn secondary" id="stopScanBtn">Stop</button>
+          <span class="small muted">Tip: point camera at patient QR</span>
+        </div>
+      
+
+        <div id="scanResult" class="small" style="margin-top:8px;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: selected prescription + billing -->
+  <div class="card">
+    <h3 id="selectedTitle">Select a prescription to view details</h3>
+    <div id="selectedArea" style="display:none;">
+      <div class="small muted">Patient</div>
+      <div style="font-weight:700; font-size:18px;" id="selPatientName"></div>
+      <div class="small muted" id="selPatientMeta"></div>
+
+      <div class="section">
+        <div class="small muted">Diagnosis</div>
+        <div id="selDiagnosis" style="white-space:pre-wrap"></div>
+      </div>
+
+      <div class="section">
+        <div class="small muted">Prescription</div>
+        <div id="selPrescription" style="white-space:pre-wrap"></div>
+      </div>
+
+      <div class="section">
+        <div class="small muted">Attached Reports</div>
+        <div id="selReports"></div>
+      </div>
+
+      <hr style="margin:12px 0; border:none; border-top:1px solid #f0f4fb;">
+
+      <div class="section">
+        <div style="display:flex; gap:10px; align-items:center;">
+          <h4 style="margin:0">Create Invoice</h4>
+          <div class="small muted" id="presStatus" style="margin-left:auto;"></div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <label>Doctor Fee (₹)</label>
+          <input id="doctorFee" type="number" value="100">
+        </div>
+
+        <div class="section">
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+            <strong>Add medicines</strong>
+            <button class="btn secondary" style="padding:8px 12px;" id="addMedicineBtn">+ Add</button>
+          </div>
+          <div id="medList">
+            <!-- medicine rows appended here -->
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <label>Discount (%)</label>
+          <input id="discount" type="number" value="0">
+        </div>
+
+        <div style="margin-top:12px;">
+          <table>
+            <tr><td>Subtotal</td><td class="right" id="subtotal">₹0</td></tr>
+            <tr><td>Doctor Fee</td><td class="right" id="feeAmount">₹0</td></tr>
+            <tr><td>Discount</td><td class="right" id="discountAmount">-₹0</td></tr>
+            <tr><th>Total</th><th class="right" id="totalAmount">₹0</th></tr>
+          </table>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button class="btn" id="payBtn">Mark Paid</button>
+          <button class="btn secondary" id="markReadyBtn">Mark Ready</button>
+          <button class="btn" id="printInvoiceBtn">Print Invoice</button>
+        </div>
+
+        <div style="margin-top:12px;">
+          <h4 style="margin:0">Payments History</h4>
+          <div id="paymentsHistory" class="small muted" style="margin-top:8px;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- dependencies -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
+<script type="module">
+  // ---------------------------
+  // Firebase init (same config as your other pages)
+  // ---------------------------
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, getDoc, getDocs, query, where, setDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAouRcoDjAVMNZmUkePlzNxUHD6DXxbxco",
+    authDomain: "meditech-83cbc.firebaseapp.com",
+    projectId: "meditech-83cbc"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // ---------------------------
+  // DOM refs
+  // ---------------------------
+  const presList = document.getElementById("presList");
+  const pendingCount = document.getElementById("pendingCount");
+
+  const selectedArea = document.getElementById("selectedArea");
+  const selectedTitle = document.getElementById("selectedTitle");
+  const selPatientName = document.getElementById("selPatientName");
+  const selPatientMeta = document.getElementById("selPatientMeta");
+  const selDiagnosis = document.getElementById("selDiagnosis");
+  const selPrescription = document.getElementById("selPrescription");
+  const selReports = document.getElementById("selReports");
+  const presStatus = document.getElementById("presStatus");
+
+  const doctorFeeEl = document.getElementById("doctorFee");
+  const medList = document.getElementById("medList");
+  const discountEl = document.getElementById("discount");
+  const subtotalEl = document.getElementById("subtotal");
+  const feeAmountEl = document.getElementById("feeAmount");
+  const discountAmountEl = document.getElementById("discountAmount");
+  const totalAmountEl = document.getElementById("totalAmount");
+  const payBtn = document.getElementById("payBtn");
+  const markReadyBtn = document.getElementById("markReadyBtn");
+  const printInvoiceBtn = document.getElementById("printInvoiceBtn");
+  const paymentsHistory = document.getElementById("paymentsHistory");
+
+  const tabList = document.getElementById("tabList");
+  const tabScanner = document.getElementById("tabScanner");
+  const tabContentList = document.getElementById("tabContent-list");
+  const tabContentScanner = document.getElementById("tabContent-scanner");
+
+  // ---------------------------
+  // state
+  // ---------------------------
+  let prescriptions = []; // local cache
+  let selectedPres = null;
+  let medicines = []; // {name, price, qty}
+
+  // ---------------------------
+  // real-time subscription: pharmacy_prescriptions
+  // ---------------------------
+  const presRef = collection(db, "pharmacy_prescriptions");
+  onSnapshot(presRef, (snap) => {
+    prescriptions = [];
+    presList.innerHTML = "";
+
+    snap.forEach(docSnap => {
+      const data = { id: docSnap.id, ...docSnap.data() };
+      prescriptions.push(data);
+    });
+
+    // show newest first
+    prescriptions.sort((a,b) => {
+      const ta = a.timestamp?.seconds ? a.timestamp.seconds : 0;
+      const tb = b.timestamp?.seconds ? b.timestamp.seconds : 0;
+      return tb - ta;
+    });
+
+    if (prescriptions.length === 0) {
+      presList.innerHTML = "<div class='small muted'>No prescriptions yet.</div>";
+    } else {
+      prescriptions.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "pres-card";
+        div.innerHTML = `
+          <div class="top">
+            <div><strong>${escapeHtml(p.patient_name || p.patient)}</strong><div class="small muted">${p.age || ""} • ${p.patient_id || ""}</div></div>
+            <div class="small">${(p.status || "Pending")}</div>
+          </div>
+          <div class="small muted" style="margin-top:8px">${truncate(p.prescription || p.prescription_text || p.prescription || '', 120)}</div>
+        `;
+        div.onclick = () => selectPrescription(p);
+        presList.appendChild(div);
+      });
+    }
+    pendingCount.textContent = prescriptions.filter(x => (x.status || 'Pending') === 'Pending').length;
+  });
+
+  // ---------------------------
+  // select prescription
+  // ---------------------------
+  async function selectPrescription(p) {
+    selectedPres = p;
+    selectedArea.style.display = "block";
+    selectedTitle.style.display = "none";
+
+    selPatientName.textContent = p.patient_name || p.patient || "Unknown";
+    selPatientMeta.textContent = `ID: ${p.patient_id || p.id} • Department: ${p.department || ''} • Created: ${p.timestamp?.toDate ? p.timestamp.toDate().toLocaleString() : ''}`;
+    selDiagnosis.textContent = p.diagnosis || p.diagnosis_text || "—";
+    selPrescription.textContent = p.prescription || p.prescription_text || "—";
+    presStatus.textContent = (p.status || "Pending");
+
+    // load attached reports if any (fetch from patient_records saved earlier)
+    selReports.innerHTML = "";
+    try {
+      // try to read patient_records file via Firestore or file link saved — if doctors saved base64 under patient_reports collection use that
+      // We'll look for a patient_reports document (if your doctor-update saved it)
+      const docRef = doc(db, "patient_reports", p.patient_id);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const d = snap.data();
+        // d.pdf may be a dataURI string
+        if (d.pdf) {
+          selReports.innerHTML += `<div class="pdf-item"><span>📄</span><div>Report saved (click to download)</div><div style="margin-left:auto"><a href="${d.pdf}" target="_blank">Open</a></div></div>`;
+        }
+      }
+    } catch(e){ /* ignore */ }
+
+    // reset invoice editor
+    medicines = [];
+    renderMedList();
+    recalcTotals();
+    loadPaymentsHistory(p.id);
+  }
+
+  // ---------------------------
+  // medicine editor
+  // ---------------------------
+  document.getElementById("addMedicineBtn").addEventListener("click", () => {
+    medicines.push({ name: "", price: 0, qty: 1 });
+    renderMedList();
+  });
+
+  function renderMedList() {
+    medList.innerHTML = "";
+    medicines.forEach((m, idx) => {
+      const row = document.createElement("div");
+      row.style.display = "grid";
+      row.style.gridTemplateColumns = "1fr 120px 100px 40px";
+      row.style.gap = "8px";
+      row.style.marginBottom = "8px";
+
+      const name = document.createElement("input");
+      name.type = "text"; name.placeholder = "Medicine name"; name.value = m.name;
+      name.oninput = (e) => { medicines[idx].name = e.target.value; };
+
+      const price = document.createElement("input");
+      price.type = "number"; price.min = 0; price.step = 0.01; price.value = m.price;
+      price.oninput = (e) => { medicines[idx].price = parseFloat(e.target.value||0); recalcTotals(); };
+
+      const qty = document.createElement("input");
+      qty.type = "number"; qty.min = 1; qty.value = m.qty;
+      qty.oninput = (e) => { medicines[idx].qty = parseInt(e.target.value||1); recalcTotals(); };
+
+      const del = document.createElement("button");
+      del.textContent = "✕"; del.title = "Remove"; del.style.cursor = "pointer";
+      del.onclick = () => { medicines.splice(idx,1); renderMedList(); recalcTotals(); };
+
+      row.appendChild(name);
+      row.appendChild(price);
+      row.appendChild(qty);
+      row.appendChild(del);
+
+      medList.appendChild(row);
+    });
+  }
+
+  function recalcTotals() {
+    const subtotal = medicines.reduce((s,m)=> s + (Number(m.price||0) * Number(m.qty||1)), 0);
+    const fee = Number(doctorFeeEl.value || 0);
+    const discountPct = Number(discountEl.value || 0);
+    const discountAmt = (subtotal + fee) * (discountPct/100);
+    const total = (subtotal + fee) - discountAmt;
+
+    subtotalEl.textContent = `₹${formatNumber(subtotal)}`;
+    feeAmountEl.textContent = `₹${formatNumber(fee)}`;
+    discountAmountEl.textContent = `-₹${formatNumber(discountAmt)}`;
+    totalAmountEl.textContent = `₹${formatNumber(total)}`;
+
+    return { subtotal, fee, discountAmt, total };
+  }
+
+  doctorFeeEl.addEventListener("input", recalcTotals);
+  discountEl.addEventListener("input", recalcTotals);
+
+  // ---------------------------
+  // Payment / invoice actions
+  // ---------------------------
+  payBtn.addEventListener("click", async () => {
+    if (!selectedPres) return alert("Select a prescription first.");
+
+    const { subtotal, fee, discountAmt, total } = recalcTotals();
+
+    // create bill record
+    const bill = {
+      prescription_id: selectedPres.id,
+      patient_id: selectedPres.patient_id,
+      patient_name: selectedPres.patient_name,
+      medicines: medicines,
+      subtotal: subtotal,
+      doctor_fee: fee,
+      discount: discountAmt,
+      total: total,
+      paid_at: new Date(),
+      status: "PAID"
+    };
+
+    try {
+      await addDoc(collection(db, "pharmacy_bills"), bill);
+      // update prescription status
+      const presDocRef = doc(db, "pharmacy_prescriptions", selectedPres.id);
+      await updateDoc(presDocRef, { status: "Completed" });
+
+      alert("Payment recorded & prescription marked Completed.");
+      // reload payments history
+      loadPaymentsHistory(selectedPres.id);
+    } catch (err) {
+      console.error(err);
+      alert("Error saving payment: " + err.message);
+    }
+  });
+
+  markReadyBtn.addEventListener("click", async () => {
+    if (!selectedPres) return alert("Select a prescription first.");
+
+    try {
+      const presDocRef = doc(db, "pharmacy_prescriptions", selectedPres.id);
+      await updateDoc(presDocRef, { status: "Ready" });
+      alert("Prescription marked Ready for pickup.");
+    } catch (err) {
+      console.error(err);
+      alert("Error: " + err.message);
+    }
+  });
+
+  printInvoiceBtn.addEventListener("click", () => {
+    // simple printable invoice pop-up
+    const { subtotal, fee, discountAmt, total } = recalcTotals();
+    const w = window.open("", "_blank", "width=800,height=900");
+    w.document.write(`<html><head><title>Invoice</title>
+      <style>body{font-family:Inter,Arial; padding:20px} table{width:100%;border-collapse:collapse} td,th{padding:8px;border-bottom:1px solid #eee}</style>
+      </head><body>`);
+    w.document.write(`<h2>Invoice - ${selectedPres.patient_name}</h2>`);
+    w.document.write(`<p><strong>Patient ID:</strong> ${selectedPres.patient_id}</p>`);
+    w.document.write(`<p><strong>Prescription:</strong><br>${escapeHtml(selectedPres.prescription || selectedPres.prescription_text || '')}</p>`);
+    w.document.write(`<h3>Items</h3>`);
+    w.document.write(`<table><tr><th>Medicine</th><th>Price</th><th>Qty</th><th>Total</th></tr>`);
+    medicines.forEach(m => {
+      w.document.write(`<tr><td>${escapeHtml(m.name)}</td><td>₹${m.price}</td><td>${m.qty}</td><td>₹${formatNumber((m.price||0)* (m.qty||1))}</td></tr>`);
+    });
+    w.document.write(`</table>`);
+    w.document.write(`<h3>Total: ₹${formatNumber(total)}</h3>`);
+    w.document.write(`<p>Doctor Fee: ₹${formatNumber(fee)}</p>`);
+    w.document.write(`<p>Discount: ₹${formatNumber(discountAmt)}</p>`);
+    w.document.write(`<p style="margin-top:20px">Thank you.</p>`);
+    w.document.write('</body></html>');
+    w.document.close();
+    w.print();
+  });
+
+  async function loadPaymentsHistory(presId) {
+    paymentsHistory.innerHTML = "";
+    // query bills for this prescription
+    try {
+      const q = query(collection(db, "pharmacy_bills"), where("prescription_id", "==", presId));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        paymentsHistory.innerHTML = "<div class='small muted'>No payments yet.</div>";
+        return;
+      }
+      snap.forEach(s => {
+        const d = s.data();
+        const div = document.createElement("div");
+        div.textContent = `${d.paid_at?.toDate ? d.paid_at.toDate().toLocaleString() : new Date(d.paid_at).toLocaleString()} - ₹${formatNumber(d.total || d.amount || 0)} - ${d.status || 'PAID'}`;
+        paymentsHistory.appendChild(div);
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  // ---------------------------
+  // QR Scanner implementation (browser camera)
+  // ---------------------------
+  const video = document.getElementById("video");
+  const startScanBtn = document.getElementById("startScanBtn");
+  const stopScanBtn = document.getElementById("stopScanBtn");
+  const scanResult = document.getElementById("scanResult");
+  let stream = null;
+  let scanning = false;
+  let scanInterval = null;
+
+function showTab(tab) {
+  if (tab === 'scanner') {
+    tabScanner.classList.add('active'); 
+    tabList.classList.remove('active');
+    tabContentScanner.style.display = '';
+    tabContentList.style.display = 'none';
+  } else {
+    tabList.classList.add('active'); 
+    tabScanner.classList.remove('active');
+    tabContentList.style.display = '';
+    tabContentScanner.style.display = 'none';
+  }
+}
+// Make function usable by HTML "onclick"
+window.showTab = showTab;
+
+
+  startScanBtn.addEventListener("click", async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      video.srcObject = stream;
+      await video.play();
+      scanning = true;
+      scanResult.textContent = "Scanning...";
+      scanInterval = setInterval(scanFrame, 500);
+    } catch (err) {
+      alert("Camera access failed: " + err.message);
+    }
+  });
+
+  stopScanBtn.addEventListener("click", () => {
+    stopScanner();
+  });
+
+  function stopScanner() {
+    scanning = false;
+    scanResult.textContent = "";
+    clearInterval(scanInterval);
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      video.srcObject = null;
+    }
+  }
+  // --------------------------------------
+// QR Scan from uploaded image (always works)
+// --------------------------------------
+document.getElementById("qrUpload").addEventListener("change", function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.src = e.target.result;
+
+    // Show preview
+    document.getElementById("qrPreview").innerHTML = 
+      `<img src="${img.src}" style="width:200px; border-radius:8px;">`;
+
+    img.onload = function() {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imgData.data, imgData.width, imgData.height);
+
+      if (code) {
+        scanResult.textContent = "QR scanned (image): " + code.data;
+        handleScannedQR(code.data);
+      } else {
+        scanResult.textContent = "Unable to detect QR in uploaded image.";
+      }
+    };
+  };
+
+  reader.readAsDataURL(file);
+});
+
+
+  function scanFrame() {
+    if (!video.videoWidth) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "attemptBoth" });
+    if (code) {
+      scanResult.textContent = "QR scanned: " + code.data;
+      stopScanner();
+      // try parse as JSON or treat as patient_id; query qr_codes collection or pharmacy_prescriptions
+      handleScannedQR(code.data);
+    }
+  }
+
+  // ---------------------------
+  // handle scanned qr payload
+  // ---------------------------
+  async function handleScannedQR(data) {
+    try {
+      let payload = null;
+      try { payload = JSON.parse(data); } catch(e) { payload = {raw: data}; }
+
+      // if payload contains patient_id or patient, search prescription
+      let found = null;
+
+      // Try direct patient_id
+      const pid = payload.patient_id || payload.patient || payload.patientId || payload.id || payload.raw;
+
+      if (pid) {
+        // search pharmacy_prescriptions where patient_id == pid and status != Completed
+        const q = query(collection(db, "pharmacy_prescriptions"), where("patient_id", "==", pid));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          snap.forEach(s => found = { id: s.id, ...s.data() });
+        }
+      }
+
+      // If still not found, try qr_codes collection where qr stored
+      if (!found) {
+        // attempt search by qr content
+        const q2 = query(collection(db, "qr_codes"), where("patient_id", "==", pid));
+        const snap2 = await getDocs(q2);
+        if (!snap2.empty) {
+          snap2.forEach(s => {
+            const d = s.data();
+            // attempt to find matching prescription id
+            if (d.prescription_id) found = { id: d.prescription_id, ...d };
+          });
+        }
+      }
+
+      if (found) {
+        // select it in UI
+        selectPrescription(found);
+        // scroll into view
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        alert("No active prescription found for scanned QR.");
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Error handling QR: " + err.message);
+    }
+  }
+
+  // ---------------------------
+  // utility helpers
+  // ---------------------------
+  function formatNumber(n) { return Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function truncate(s, n=100){ if(!s) return ''; return s.length>n? s.slice(0,n-1)+"...": s; }
+  function escapeHtml(str) { if(!str) return ''; return String(str).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; }); }
+
+  // on load: show list tab
+  showTab('list');
+
+</script>
+
+</body>
+</html>

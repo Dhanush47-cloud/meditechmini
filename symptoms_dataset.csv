@@ -1,0 +1,78 @@
+symptoms,department
+"fever, headache",General
+"cough, sore throat",General
+"fatigue, body ache",General
+"runny nose, sneezing",General
+"chills, sweating",General
+"nausea, vomiting",General
+"diarrhea, abdominal pain",General
+"loss of appetite, weakness",General
+"sore throat, hoarseness",General
+"body ache, mild fever",General
+"muscle pain, joint stiffness",General
+"dizziness, fainting",General
+"headache, blurred vision",General
+"ear pain, mild fever",General
+"nasal congestion, sneezing",General
+"sneezing, watery eyes",General
+"mild fever, chills",General
+"fatigue, headache",General
+"nausea, mild fever",General
+"loss of taste, loss of smell",General
+"chest pain, shortness of breath",Cardiology
+"irregular heartbeat, dizziness",Cardiology
+"high blood pressure, chest discomfort",Cardiology
+"palpitations, fainting",Cardiology
+"heartburn, chest tightness",Cardiology
+"swelling legs, fatigue",Cardiology
+"rapid heartbeat, shortness of breath",Cardiology
+"pain left arm, sweating",Cardiology
+"dizziness, high blood pressure",Cardiology
+"breathlessness, irregular heartbeat",Cardiology
+"chest discomfort, fatigue",Cardiology
+"heart palpitations, chest pain",Cardiology
+"swollen ankles, fluid retention",Cardiology
+"shortness of breath, coughing",Cardiology
+"rash, itching",Dermatology
+"red spots, skin irritation",Dermatology
+"dry skin, flaking",Dermatology
+"eczema, itchy patches",Dermatology
+"hives, swelling",Dermatology
+"acne, pimples",Dermatology
+"ringworm, circular rash",Dermatology
+"psoriasis, scaling",Dermatology
+"skin redness, irritation",Dermatology
+"blisters, itching",Dermatology
+"itchy scalp, dandruff",Dermatology
+"sunburn, redness",Dermatology
+"burning sensation, rash",Dermatology
+"allergic reaction, hives",Dermatology
+"skin lesions, redness",Dermatology
+"eczema, redness, dryness",Dermatology
+"rash, blisters, itching",Dermatology
+"flaky scalp, redness",Dermatology
+"itching, small bumps",Dermatology
+"rash, swelling",Dermatology
+"skin irritation, redness",Dermatology
+"pimples, oily skin",Dermatology
+"red patches, scaling",Dermatology
+"skin dryness, cracking",Dermatology
+"skin inflammation, redness",Dermatology
+"burns, blisters",Dermatology
+"itching, rashes",Dermatology
+"acne, oily patches",Dermatology
+"mild rash, itching",Dermatology
+"small red bumps, itching",Dermatology
+"irritated skin, redness",Dermatology
+"rash, dry patches",Dermatology
+"red spots, bumps",Dermatology
+"chest tightness, palpitations",Cardiology
+"fatigue, irregular heartbeat",Cardiology
+"shortness of breath, dizziness",Cardiology
+"swelling legs, chest pain",Cardiology
+"high blood pressure, headache",Cardiology
+"heart racing, fatigue",Cardiology
+"dizziness, chest discomfort",Cardiology
+"mild chest pain, palpitations",Cardiology
+"shortness of breath, swelling ankles",Cardiology
+"fatigue, rapid heartbeat",Cardiology           

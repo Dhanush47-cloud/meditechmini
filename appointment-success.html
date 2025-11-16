@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Appointment Confirmed - MediTech</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, #e8f2ff, #ffffff);
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+    }
+
+    .card {
+        background: #ffffff;
+        width: 92%;
+        max-width: 520px;
+        padding: 35px;
+        border-radius: 18px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.13);
+        border-top: 6px solid #007bff;
+        text-align: center;
+    }
+
+    .checkmark {
+        font-size: 70px;
+        color: #28a745;
+        margin-bottom: 12px;
+    }
+
+    .details-box {
+        background: #f6f9ff;
+        border: 1.5px solid #cfe0ff;
+        padding: 15px;
+        border-radius: 12px;
+        margin-top: 20px;
+        text-align: left;
+    }
+
+    .btn {
+        display: block;
+        width: 100%;
+        padding: 14px;
+        margin-top: 18px;
+        background: #007bff;
+        color: #fff;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 16px;
+    }
+
+    .btn-secondary {
+        background: #e9ecef;
+        color: #333;
+    }
+
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+    <div class="checkmark">✔</div>
+    <h2>Appointment Confirmed!</h2>
+
+    <div class="details-box">
+        <p><strong>Appointment ID:</strong> <span id="apptID"></span></p>
+
+        <p><strong>Doctor:</strong> <span id="docName"></span></p>
+        <p><strong>Department:</strong> <span id="docDept"></span></p>
+
+        <p><strong>Date:</strong> <span id="apptDate"></span></p>
+        <p><strong>Time:</strong> <span id="apptTime"></span></p>
+    </div>
+
+    <h3 style="margin-top:20px;">Your QR Code</h3>
+    <div id="qrcode"></div>
+
+    <button onclick="saveSlip()" class="btn-secondary btn" style="margin-top:15px;">
+        Download Appointment Slip
+    </button>
+
+    <a href="patient-dashboard.html" class="btn">Go to Dashboard</a>
+    
+<!-- NEW BUTTON -->
+<a href="my-appointments.html" class="btn btn-secondary">
+    View My Appointments
+</a>
+
+
+</div>
+
+<script>
+// Load appointment
+const appt = JSON.parse(localStorage.getItem("lastAppointment"));
+
+document.getElementById("docName").textContent = appt.doctor_name;
+document.getElementById("docDept").textContent = appt.department;
+document.getElementById("apptDate").textContent = appt.date;
+document.getElementById("apptTime").textContent = appt.time;
+
+const apptID = "APT-" + Date.now();
+document.getElementById("apptID").textContent = apptID;
+
+// Save appointment ID
+appt.appointment_id = apptID;
+localStorage.setItem("lastAppointment", JSON.stringify(appt));
+
+// Generate QR
+new QRCode(document.getElementById("qrcode"), {
+    text: `Appointment ID: ${apptID}
+Doctor: ${appt.doctor_name}
+Dept: ${appt.department}
+Date: ${appt.date}
+Time: ${appt.time}`,
+    width: 180,
+    height: 180
+});
+
+// Download slip
+function saveSlip() {
+    const content = `
+----- APPOINTMENT SLIP -----
+Appointment ID: ${apptID}
+Doctor: ${appt.doctor_name}
+Department: ${appt.department}
+Date: ${appt.date}
+Time: ${appt.time}
+----------------------------
+    `;
+    const blob = new Blob([content], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Appointment_${apptID}.txt`;
+    link.click();
+}
+
+</script>
+
+</body>
+</html>

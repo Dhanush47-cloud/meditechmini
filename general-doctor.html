@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>General – MediTech Doctor Dashboard</title>
+
+<style>
+body { background:#f3f6f8; font-family:Segoe UI; margin:0; }
+header { background:white; padding:20px; box-shadow:0 4px 10px #0001; }
+.header-title { display:flex; align-items:center; gap:15px; }
+.header-title img { height:60px; }
+.dashboard { width:90%; margin:20px auto; }
+.section { background:white; padding:20px; border-radius:12px; margin-top:20px; box-shadow:0 4px 10px #0001; }
+.patient-card { background:#f6faff; padding:15px; border:1px solid #dce9ff; border-radius:10px; margin-bottom:10px; }
+.btn { padding:8px 15px; background:#007bff; color:white; border:none; border-radius:6px; cursor:pointer; }
+.notif-popup {
+    position: fixed; top: 20px; right: 20px;
+    background:#007bff; color:white; padding:12px 18px;
+    border-radius:6px; animation:fade-in 0.3s;
+}
+@keyframes fade-in {
+    from { opacity:0; transform:translateY(-10px); }
+    to { opacity:1; transform:translateY(0); }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="header-title">
+      <img src="logo.webp">
+      <h1 style="color:#007bff; font-size:2rem;">General Medicine</h1>
+  </div>
+  <button id="logoutBtn" class="btn" style="float:right; margin-top:-55px;">Logout</button>
+</header>
+
+<div class="dashboard">
+
+    <!-- NEW APPOINTMENTS -->
+    <div class="section">
+        <h2>🆕 New Appointments</h2>
+        <div id="appointments"></div>
+    </div>
+
+    <!-- MY PATIENTS -->
+    <div class="section">
+        <h2>👨‍⚕️ My Patients</h2>
+        <div id="myPatients"></div>
+    </div>
+
+</div>
+
+<script>
+
+let DOCTOR_DEPARTMENT = "General";
+let lastCount = 0;
+
+function showNotification(msg) {
+    const n = document.createElement("div");
+    n.className = "notif-popup";
+    n.innerText = msg;
+    document.body.appendChild(n);
+    setTimeout(() => n.remove(), 3000);
+}
+
+// LOAD New Patients (from Flask)
+function loadAppointments() {
+    fetch(`http://127.0.0.1:5000/get_appointments/${DOCTOR_DEPARTMENT}`)
+        .then(res => res.json())
+        .then(data => {
+
+            const container = document.getElementById("appointments");
+            container.innerHTML = "";
+
+            if (data.length > lastCount) showNotification("New General appointment received!");
+            lastCount = data.length;
+
+            data.forEach(p => {
+                container.innerHTML += `
+                    <div class="patient-card">
+                        <h3>${p.name} (Age: ${p.age})</h3>
+                        <p><b>Symptoms:</b> ${p.symptoms}</p>
+                        <p><b>Visiting Time:</b> ${p.timestamp}</p>
+                        <p><b>Medical History:</b> ${p.answers ? JSON.stringify(p.answers) : "No previous data"}</p>
+
+                        <button class="btn" onclick='acceptPatient(${JSON.stringify(p)})'>
+                            Accept Appointment
+                        </button>
+                    </div>
+                `;
+            });
+        });
+}
+
+// MOVE to My Patients
+function acceptPatient(p) {
+    let saved = JSON.parse(localStorage.getItem("generalPatients") || "[]");
+
+    p.status = "Accepted";
+    saved.push(p);
+
+    localStorage.setItem("generalPatients", JSON.stringify(saved));
+    alert("Patient moved to My Patients");
+
+    loadMyPatients();
+}
+
+// LOAD My Patients
+function loadMyPatients() {
+    let saved = JSON.parse(localStorage.getItem("generalPatients") || "[]");
+    const container = document.getElementById("myPatients");
+
+    container.innerHTML = "";
+
+    saved.forEach(p => {
+        container.innerHTML += `
+            <div class="patient-card">
+                <h3>${p.name} (Age: ${p.age})</h3>
+                <p><b>Status:</b> ${p.status}</p>
+                <p><b>Symptoms:</b> ${p.symptoms}</p>
+
+                <button class="btn" onclick='updatePatient(${JSON.stringify(p)})'>
+                    Update Patient Details
+                </button>
+            </div>
+        `;
+    });
+}
+
+// Open update page
+function updatePatient(patient) {
+    localStorage.setItem("selectedPatient", JSON.stringify(patient));
+    window.location.href = "doctor-update.html";
+}
+
+setInterval(loadAppointments, 10000);
+loadAppointments();
+loadMyPatients();
+
+document.getElementById("logoutBtn").onclick = () => window.location.href = "login.html";
+
+</script>
+
+</body>
+</html>

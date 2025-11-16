@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Patient Dashboard - MediTech</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- PDF library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      background: #f6f9ff;
+      color: #333;
+      display: flex;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 250px;
+      height: 100vh;
+      background: #ffffff;
+      box-shadow: 2px 0 15px rgba(0,0,0,0.08);
+      position: fixed;
+      top: 0;
+      left: 0;
+      padding-top: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar h2 {
+      text-align: center;
+      color: #007bff;
+      margin-bottom: 25px;
+      font-weight: 700;
+    }
+
+    .menu-item {
+      padding: 14px 20px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: 0.25s;
+    }
+
+    .menu-item.active,
+    .menu-item:hover {
+      background: #eaf2ff;
+      color: #007bff;
+      font-weight: 700;
+    }
+
+    .logout-btn {
+      margin-top: auto;
+      padding: 14px;
+      background: #e74c3c;
+      border: none;
+      color: white;
+      font-weight: 700;
+      width: 90%;
+      margin-left: 5%;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    /* MAIN CONTENT */
+    .main-content {
+      margin-left: 250px;
+      padding: 30px;
+      width: calc(100% - 250px);
+    }
+
+    .dashboard-container {
+      max-width: 900px;
+      background: #fff;
+      padding: 40px;
+      border-radius: 16px;
+      border-top: 5px solid #007bff;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+      margin-bottom: 40px;
+    }
+
+    .dashboard-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #007bff;
+      margin-bottom: 30px;
+    }
+
+    label { font-weight: 600; }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 15px;
+      margin-bottom: 18px;
+      border-radius: 10px;
+      border: 1.6px solid #cbd6e2;
+    }
+
+    .save-btn,
+    .download-btn {
+      padding: 12px 18px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .report-card {
+      border-left: 5px solid #007bff;
+      padding: 20px;
+      background: #fff;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .qr-img {
+      width: 180px;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <h2>Patient Panel</h2>
+
+  <div class="menu-item active" data-section="formSection">📝 Fill Application Form</div>
+  <div class="menu-item" data-section="reportSection">📄 Consultation Reports</div>
+  <div class="menu-item" data-section="qrSection">🔳 QR Code</div>
+
+  <button id="logoutBtn" class="logout-btn">Logout</button>
+</div>
+
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+
+  <!-- FORM SECTION -->
+  <div id="formSection" class="dashboard-container">
+    <h2 class="dashboard-title">Patient EHR Profile</h2>
+
+    <form id="personalInfoForm">
+
+      <label>First Name</label>
+      <input type="text" id="fname" required>
+
+      <label>Last Name</label>
+      <input type="text" id="lname" required>
+
+      <label>Date of Birth</label>
+      <input type="date" id="dob" required>
+
+      <label>Age</label>
+      <input type="number" id="age" required>
+
+      <label>Gender</label>
+      <select id="gender" required>
+        <option value="" disabled selected>Select gender</option>
+        <option>male</option>
+        <option>female</option>
+        <option>other</option>
+      </select>
+
+      <label>Address</label>
+      <textarea id="address" rows="3"></textarea>
+
+      <label>Contact Info</label>
+      <input type="text" id="contact">
+
+      <label>Medical History</label>
+      <textarea id="medicalHistory" rows="4"></textarea>
+
+      <button class="save-btn" type="submit">Save Information</button>
+
+    </form>
+  </div>
+
+  <!-- CONSULTATION REPORTS SECTION -->
+  <div id="reportSection" class="dashboard-container" style="display:none;">
+    <h2 class="dashboard-title">Consultation Reports</h2>
+    <div id="reportsContainer"></div>
+  </div>
+
+  <!-- QR CODE SECTION -->
+  <div id="qrSection" class="dashboard-container" style="display:none;">
+    <h2 class="dashboard-title">Your QR Code</h2>
+    <div id="qrDisplay"></div>
+    <button class="download-btn" id="qrDownloadBtn" style="margin-top:20px; display:none;">
+      🔳 Download QR Code
+    </button>
+  </div>
+
+</div>
+
+
+<!-- FIREBASE LOGIC -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAouRcoDjAVMNZmUkePlzNxUHD6DXxbxco",
+    authDomain: "meditech-83cbc.firebaseapp.com",
+    projectId: "meditech-83cbc",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  /* ----------------------------------------------------
+     SIDEBAR LOGIC
+  ---------------------------------------------------- */
+  function showSection(id) {
+    document.getElementById("formSection").style.display = "none";
+    document.getElementById("reportSection").style.display = "none";
+    document.getElementById("qrSection").style.display = "none";
+
+    document.getElementById(id).style.display = "block";
+  }
+
+  window.showSection = showSection;
+
+  document.querySelectorAll(".menu-item").forEach(menu => {
+    menu.addEventListener("click", () => {
+      document.querySelectorAll(".menu-item").forEach(m => m.classList.remove("active"));
+      menu.classList.add("active");
+      showSection(menu.dataset.section);
+    });
+  });
+
+
+  /* ----------------------------------------------------
+     LOAD PATIENT PROFILE
+  ---------------------------------------------------- */
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) return (window.location.href = "login.html");
+
+    const patientRef = doc(db, "patients", user.uid);
+    const snap = await getDoc(patientRef);
+
+    if (!snap.exists()) return;
+
+    const d = snap.data();
+
+    fname.value = d.name?.given?.[0] || "";
+    lname.value = d.name?.family || "";
+    dob.value = d.birthDate || "";
+    age.value = calculateAge(d.birthDate);
+    gender.value = d.gender || "";
+    address.value = d.address || "";
+    contact.value = d.contact || "";
+    medicalHistory.value = d.medicalHistory || "";
+
+    const pid = d.patient_id;
+
+    if (pid) {
+      loadConsultationReports(pid);
+      loadQRCode(pid);
+    }
+  });
+
+  function calculateAge(d) {
+    if (!d) return "";
+    const dob = new Date(d);
+    return new Date(Date.now() - dob.getTime()).getUTCFullYear() - 1970;
+  }
+
+
+  /* ----------------------------------------------------
+     SAVE FORM
+  ---------------------------------------------------- */
+  personalInfoForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const user = auth.currentUser;
+
+    await setDoc(doc(db, "patients", user.uid), {
+      name: { given: [fname.value], family: lname.value },
+      gender: gender.value,
+      birthDate: dob.value,
+      age: Number(age.value),
+      address: address.value,
+      contact: contact.value,
+      medicalHistory: medicalHistory.value,
+      updatedAt: new Date(),
+      patient_id: localStorage.getItem("patient_id") || null
+    }, { merge: true });
+
+    window.location.href = "s.html";
+  });
+
+
+  /* ----------------------------------------------------
+     LOAD CONSULTATION REPORTS (NO QR HERE)
+  ---------------------------------------------------- */
+  async function loadConsultationReports(pid) {
+    const ref = collection(db, "patient_consultations", pid, "records");
+    const snap = await getDocs(ref);
+
+    reportsContainer.innerHTML = "";
+
+    snap.forEach(docSnap => {
+      const d = docSnap.data();
+      const reportId = docSnap.id;
+
+      reportsContainer.innerHTML += `
+        <div class="report-card">
+          <h3>${d.timestamp.toDate().toLocaleString()}</h3>
+          <p><b>Diagnosis:</b> ${d.diagnosis}</p>
+          <p><b>Prescription:</b> ${d.prescription}</p>
+          <p><b>Next Appointment:</b> ${d.nextDate || "Not set"}</p>
+          <p><b>Notes:</b> ${d.notes}</p>
+
+          <button class="download-btn" onclick="downloadReport('${reportId}', '${pid}')">
+            📄 Download Report
+          </button>
+        </div>
+      `;
+    });
+  }
+
+  /* ----------------------------------------------------
+     DOWNLOAD REPORT PDF
+  ---------------------------------------------------- */
+  window.downloadReport = async function(reportId, pid) {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF();
+
+    const snap = await getDoc(doc(db, "patient_consultations", pid, "records", reportId));
+    const d = snap.data();
+
+    let y = 20;
+
+    pdf.setFontSize(18);
+    pdf.text("Medical Consultation Report", 20, y);
+
+    pdf.setFontSize(12);
+    y += 20;
+
+    pdf.text(`Patient ID: ${pid}`, 20, y); y += 10;
+    pdf.text(`Date: ${d.timestamp.toDate().toLocaleString()}`, 20, y); y += 10;
+    pdf.text(`Diagnosis: ${d.diagnosis}`, 20, y); y += 10;
+    pdf.text(`Prescription: ${d.prescription}`, 20, y); y += 10;
+    pdf.text(`Next Appointment: ${d.nextDate}`, 20, y); y += 10;
+    pdf.text(`Notes: ${d.notes}`, 20, y);
+
+    pdf.save(`Consultation_Report_${pid}.pdf`);
+  }
+
+
+  /* ----------------------------------------------------
+     QR CODE PAGE (ONLY HERE)
+  ---------------------------------------------------- */
+  async function loadQRCode(pid) {
+    const snap = await getDoc(doc(db, "qr_codes", pid));
+
+    if (!snap.exists()) return;
+
+    const qr = snap.data().qr;
+
+    qrDisplay.innerHTML = `<img src="${qr}" class="qr-img">`;
+
+    const btn = document.getElementById("qrDownloadBtn");
+    btn.style.display = "block";
+
+    btn.onclick = () => {
+      const a = document.createElement("a");
+      a.href = qr;
+      a.download = `QR_${pid}.png`;
+      a.click();
+    };
+  }
+
+
+  /* ----------------------------------------------------
+     LOGOUT
+  ---------------------------------------------------- */
+  logoutBtn.onclick = async () => {
+    await signOut(auth);
+    window.location.href = "login.html";
+  };
+
+</script>
+
+</body>
+</html>

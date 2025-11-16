@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Hospital Doctor Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <!-- Sidebar - Common to all pages -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3>Doctor Dashboard</h3>
+                <!-- Header doctor profile (moved from navbar) -->
+                <div class="doctor-profile header-doctor-profile">
+                    <img src="img3.jpg" alt="Doctor Profile" class="profile-pic">
+                    <span>Dr. Emily Garcia</span>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="doctor-dashboard.html"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+                    <li><a href="appointments.html"><i class="fas fa-calendar-alt"></i> <span>Appointments</span></a></li>
+                    <li><a href="appointment-page.html"><i class="fas fa-user-injured"></i> <span>Appointment Page</span></a></li>
+                    <li><a href="settings.html" class="active"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
+                    <li><a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Navbar - Common to all pages -->
+            <header class="navbar">
+                <div class="nav-left">
+                    <button class="sidebar-toggle" aria-label="Toggle Sidebar">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="page-title">Settings</h1>
+                </div>
+                <div class="nav-center">
+                    <div class="search-bar">
+                        <input type="text" placeholder="Search...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                </div>
+                <div class="nav-right">
+                    <div class="datetime">
+                        <span id="current-date"></span> | <span id="current-time"></span>
+                    </div>
+                    <!-- doctor-profile moved to sidebar header for consistent layout -->
+                </div>
+            </header>
+
+            <!-- Settings Page Content -->
+            <main class="settings-main">
+                <section class="profile-settings card">
+                    <h2>Doctor Profile</h2>
+                    <form id="profile-form">
+                        <div class="form-group">
+                            <label for="doctor-name">Name</label>
+                            <input type="text" id="doctor-name" value="Dr. Emily White" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="doctor-department">Department</label>
+                            <input type="text" id="doctor-department" value="General Medicine" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="doctor-contact">Contact Number</label>
+                            <input type="tel" id="doctor-contact" value="+1 (555) 123-4567" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="doctor-email">Email</label>
+                            <input type="email" id="doctor-email" value="emily.white@hospital.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="change-password">Change Password</label>
+                            <button type="button" class="btn btn-secondary">Update Password</button>
+                            <p class="form-hint">A secure link will be sent to your email.</p>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </section>
+
+                <section class="system-preferences card">
+                    <h2>System Preferences</h2>
+                    <div class="form-group">
+                        <label for="dark-mode-toggle">Dark Mode</label>
+                        <label class="switch">
+                            <input type="checkbox" id="dark-mode-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Notification Preferences</label>
+                        <div>
+                            <input type="checkbox" id="notify-email" checked>
+                            <label for="notify-email">Email Notifications</label>
+                        </div>
+                        <div>
+                            <input type="checkbox" id="notify-sms">
+                            <label for="notify-sms">SMS Notifications</label>
+                        </div>
+                        <div>
+                            <input type="checkbox" id="notify-app" checked>
+                            <label for="notify-app">In-app Alerts</label>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="save-preferences-btn">Save Preferences</button>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Logout Modal - Common to all pages -->
+    <div id="logout-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Confirm Logout</h2>
+            <p>Are you sure you want to logout?</p>
+            <div class="modal-actions">
+                <button id="confirm-logout" class="btn btn-danger">Logout</button>
+                <button id="cancel-logout" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

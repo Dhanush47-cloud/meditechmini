@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Symptom Checker - MediTech</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #e6f0ff 0%, #ffffff 100%);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 640px;
+      width: 100%;
+      background: #fff;
+      padding: 35px 40px;
+      border-radius: 18px;
+      border-top: 6px solid #007bff;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+      animation: fadeIn .4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 { color: #007bff; text-align: center; }
+    p.subtitle { color: #666; text-align: center; }
+
+    input, select {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1.6px solid #c8d6e6;
+      background: #f8fbff;
+      margin-bottom: 16px;
+      transition: .2s;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      border-radius: 10px;
+      background: #007bff;
+      color: white;
+      font-weight: 700;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .question-card {
+      background: #f4f9ff;
+      border: 1.5px solid #cde1ff;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    #result { color: #27ae60; font-weight: 700; text-align: center; }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h2>AI Symptom Analyzer</h2>
+  <p class="subtitle">Describe your symptoms to help us route you to a doctor.</p>
+
+  <input type="text" id="symptomsInput" placeholder="Example: fever, chest pain, dizziness...">
+
+  <button id="submitBtn">Analyze Symptoms</button>
+
+  <div id="result"></div>
+
+  <h3 id="qTitle" style="display:none; margin-top:20px; color:#007bff;">Follow-up Questions</h3>
+  <div id="questionBox"></div>
+
+  <button id="submitAnswersBtn" style="display:none;">Submit Responses</button>
+
+</div>
+
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { 
+    getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs 
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAouRcoDjAVMNZmUkePlzNxUHD6DXxbxco",
+    authDomain: "meditech-83cbc.firebaseapp.com",
+    projectId: "meditech-83cbc",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  let currentDept = null;
+  let currentPatientId = null;
+  let currentQuestions = [];
+
+  function calculateAge(dobString) {
+    const dob = new Date(dobString);
+    const diff = Date.now() - dob.getTime();
+    return new Date(diff).getUTCFullYear() - 1970;
+  }
+
+  async function getDoctor(dept) {
+    const q = query(collection(db, "doctors"), where("department", "==", dept));
+    const snap = await getDocs(q);
+    let docData = null;
+    snap.forEach(d => { docData = { id: d.id, ...d.data() }; });
+    return docData;
+  }
+
+  // ------------------ SUBMIT SYMPTOMS ------------------
+  async function submitSymptoms() {
+    const symptoms = symptomsInput.value.trim();
+    if (!symptoms) return alert("Please enter symptoms.");
+
+    const user = auth.currentUser;
+    const ref = doc(db, "patients", user.uid);
+    const snap = await getDoc(ref);
+
+    let fullName = "Unknown";
+    let age = "N/A";
+
+    if (snap.exists()) {
+      const d = snap.data();
+      fullName = `${d.name.given[0]} ${d.name.family}`;
+      age = calculateAge(d.birthDate);
+    }
+
+    // CALL FLASK API
+    const res = await fetch("http://127.0.0.1:5000/predict_department", {
+      method:"POST",
+      headers:{ "Content-Type": "application/json" },
+      body:JSON.stringify({
+        name: fullName,
+        age: age,
+        symptoms: symptoms
+      })
+    });
+
+    const data = await res.json();
+    currentDept = data.department;
+    currentPatientId = data.patient_id;   // ⭐ IMPORTANT
+
+    // ⭐ STORE patient_id locally (used by doctor + dashboard)
+    localStorage.setItem("patient_id", currentPatientId);
+
+    // ⭐ STORE patient_id IN FIRESTORE (permanent fix)
+    await setDoc(doc(db, "patients", user.uid), {
+      patient_id: currentPatientId
+    }, { merge: true });
+
+    result.textContent = "Predicted Department: " + data.department;
+
+    renderQuestions(data.questions);
+  }
+
+  function renderQuestions(list) {
+    questionBox.innerHTML = "";
+
+    qTitle.style.display = list.length ? "block" : "none";
+    submitAnswersBtn.style.display = list.length ? "block" : "none";
+
+    list.forEach(q => {
+      const div = document.createElement("div");
+      div.className = "question-card";
+
+      if (q.type === "single_choice") {
+        div.innerHTML = `
+          <label>${q.q}</label>
+          <select data-id="${q.id}">
+            ${q.choices.map(c => `<option value="${c}">${c}</option>`).join("")}
+          </select>
+        `;
+      } else {
+        div.innerHTML = `
+          <label>${q.q}</label>
+          <input data-id="${q.id}" type="text">
+        `;
+      }
+
+      questionBox.appendChild(div);
+    });
+
+    currentQuestions = list;
+  }
+
+  // ------------------ SUBMIT ANSWERS ------------------
+  async function submitAnswers() {
+    let answers = {};
+    document.querySelectorAll("[data-id]").forEach(el => {
+      answers[el.dataset.id] = el.value;
+    });
+
+    // Save to Flask
+    await fetch("http://127.0.0.1:5000/save_answers", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        patient_id: currentPatientId,
+        answers: answers
+      })
+    });
+
+    const user = auth.currentUser;
+
+    // Save into Firestore also
+    await setDoc(doc(db, "patients", user.uid), {
+      answers,
+      symptomsCompletedAt: new Date(),
+      patient_id: currentPatientId   // ⭐ ensure updated
+    }, { merge: true });
+
+    const doctor = await getDoctor(currentDept);
+
+    // Save allocation info
+    localStorage.setItem("allocatedDoctor", JSON.stringify({
+      doctor,
+      department: currentDept,
+      patient_id: currentPatientId
+    }));
+
+    window.location.href = "doctor-allocated.html";
+  }
+
+
+  submitBtn.onclick = submitSymptoms;
+  submitAnswersBtn.onclick = submitAnswers;
+
+</script>
+
+</body>
+</html>

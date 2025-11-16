@@ -1,0 +1,115 @@
+{
+  "General": {
+    "priority_questions": [
+      {
+        "id": "g1",
+        "q": "How long have you been experiencing these symptoms?",
+        "type": "text"
+      },
+      {
+        "id": "g2",
+        "q": "Do you have any other associated symptoms like fever, fatigue, or body ache?",
+        "type": "multichoice",
+        "choices": ["Fever", "Fatigue", "Body Ache", "None"]
+      },
+      {
+        "id": "g3",
+        "q": "Are you currently taking any medication or under treatment?",
+        "type": "yes_no"
+      },
+      {
+        "id": "g4",
+        "q": "Have you experienced similar symptoms before?",
+        "type": "yes_no"
+      }
+    ],
+    "optional_questions": [
+      {
+        "id": "g5",
+        "q": "Have you recently traveled or been in contact with sick individuals?",
+        "type": "yes_no"
+      },
+      {
+        "id": "g6",
+        "q": "Rate the severity of your symptoms on a scale of 1 to 10.",
+        "type": "number"
+      }
+    ]
+  },
+
+  "Cardiology": {
+    "priority_questions": [
+      {
+        "id": "c1",
+        "q": "Describe the chest pain — sharp, dull, pressure, or tightness?",
+        "type": "single_choice",
+        "choices": ["Sharp", "Dull", "Pressure", "Tightness"]
+      },
+      {
+        "id": "c2",
+        "q": "When did the chest pain or discomfort start?",
+        "type": "text"
+      },
+      {
+        "id": "c3",
+        "q": "Does the pain radiate to your jaw, left arm, or back?",
+        "type": "yes_no"
+      },
+      {
+        "id": "c4",
+        "q": "Do you feel shortness of breath or dizziness?",
+        "type": "yes_no"
+      }
+    ],
+    "optional_questions": [
+      {
+        "id": "c5",
+        "q": "Do you have a history of high blood pressure, diabetes, or heart disease?",
+        "type": "yes_no"
+      },
+      {
+        "id": "c6",
+        "q": "Are you currently taking medications such as aspirin or beta-blockers?",
+        "type": "yes_no"
+      }
+    ]
+  },
+
+  "Dermatology": {
+    "priority_questions": [
+      {
+        "id": "d1",
+        "q": "Where on your body is the skin problem located?",
+        "type": "text"
+      },
+      {
+        "id": "d2",
+        "q": "How long have you noticed this issue?",
+        "type": "text"
+      },
+      {
+        "id": "d3",
+        "q": "Is the area itchy, painful, or bleeding?",
+        "type": "single_choice",
+        "choices": ["Itchy", "Painful", "Bleeding", "None"]
+      },
+      {
+        "id": "d4",
+        "q": "Have you used any creams or medicines for it?",
+        "type": "yes_no"
+      }
+    ],
+    "optional_questions": [
+      {
+        "id": "d5",
+        "q": "Have you been exposed to any new soaps, cosmetics, or detergents recently?",
+        "type": "yes_no"
+      },
+      {
+        "id": "d6",
+        "q": "Does anyone else in your family have a similar skin issue?",
+        "type": "yes_no"
+      }
+    ]
+  }
+}
