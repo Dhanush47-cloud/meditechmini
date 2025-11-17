@@ -111,6 +111,11 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
+  // ⭐ AUTO-DETECT LOCAL VS PRODUCTION BACKEND
+  const API_BASE_URL = window.location.hostname === "localhost"
+    ? "http://127.0.0.1:5000"
+    : "https://meditechbackend.onrender.com";
+
   let currentDept = null;
   let currentPatientId = null;
   let currentQuestions = [];
@@ -147,8 +152,8 @@
       age = calculateAge(d.birthDate);
     }
 
-    // CALL FLASK API
-    const res = await fetch("http://127.0.0.1:5000/predict_department", {
+    // CALL FLASK API (UPDATED)
+    const res = await fetch(`${API_BASE_URL}/predict_department`, {
       method:"POST",
       headers:{ "Content-Type": "application/json" },
       body:JSON.stringify({
@@ -160,12 +165,10 @@
 
     const data = await res.json();
     currentDept = data.department;
-    currentPatientId = data.patient_id;   // ⭐ IMPORTANT
+    currentPatientId = data.patient_id;
 
-    // ⭐ STORE patient_id locally (used by doctor + dashboard)
     localStorage.setItem("patient_id", currentPatientId);
 
-    // ⭐ STORE patient_id IN FIRESTORE (permanent fix)
     await setDoc(doc(db, "patients", user.uid), {
       patient_id: currentPatientId
     }, { merge: true });
@@ -212,8 +215,8 @@
       answers[el.dataset.id] = el.value;
     });
 
-    // Save to Flask
-    await fetch("http://127.0.0.1:5000/save_answers", {
+    // Save to Flask (UPDATED)
+    await fetch(`${API_BASE_URL}/save_answers`, {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
@@ -224,16 +227,14 @@
 
     const user = auth.currentUser;
 
-    // Save into Firestore also
     await setDoc(doc(db, "patients", user.uid), {
       answers,
       symptomsCompletedAt: new Date(),
-      patient_id: currentPatientId   // ⭐ ensure updated
+      patient_id: currentPatientId
     }, { merge: true });
 
     const doctor = await getDoctor(currentDept);
 
-    // Save allocation info
     localStorage.setItem("allocatedDoctor", JSON.stringify({
       doctor,
       department: currentDept,
@@ -243,11 +244,11 @@
     window.location.href = "doctor-allocated.html";
   }
 
-
   submitBtn.onclick = submitSymptoms;
   submitAnswersBtn.onclick = submitAnswers;
 
 </script>
+
 
 </body>
 </html>
